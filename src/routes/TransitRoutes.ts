@@ -1,24 +1,14 @@
 import { Router } from "express";
 import { TransitController } from "../controllers/TransitController";
+import { withErrorCatcher } from "../middlewares/ErrorResCatcherMW";
 
-export class TransitRoutes {
-  private readonly router: Router;
-  private readonly controller: TransitController;
+export function getTransitRouter(): Router {
+    const router = Router();
+    const controller = new TransitController();
 
-  constructor() {
-    this.router = Router();
-    this.controller = new TransitController();
-    this.initRoutes();
-  }
+    router.get("/routes/:city", withErrorCatcher(controller.getRoutes.bind(controller)));
+    router.get("/eta", withErrorCatcher(controller.getETA.bind(controller)));
+    router.post("/incident", withErrorCatcher(controller.reportIncident.bind(controller)));
 
-  private initRoutes(): void {
-    this.router.get("/routes/:city", this.controller.getRoutes.bind(this.controller));
-    this.router.get("/eta", this.controller.getETA.bind(this.controller));
-    this.router.post("/incident", this.controller.reportIncident.bind(this.controller));
-  }
-
-  public getRouter(): Router {
-    return this.router;
-  }
+    return router;
 }
-

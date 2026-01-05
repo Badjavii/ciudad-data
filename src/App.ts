@@ -2,15 +2,13 @@ import express, { Application } from "express";
 import dotenv from "dotenv";
 import { initSwagger } from "./config/swagger";
 import { initDB } from "./config/database";
-import { Singleton } from "./middlewares/annotations";
-import { GeoRoutes } from "./routes/GeoRoutes";
-import { TransitRoutes } from "./routes/TransitRoutes";
+import { getGeoRouter } from "./routes/GeoRoutes";
+import { getTransitRouter } from "./routes/TransitRoutes";
 
-@Singleton()
 export class App {
     public readonly expressApp: Application;
 
-    private constructor(){
+    public constructor(){
         this.expressApp = express();
         this.initConfig();
         this.initDataBase();
@@ -20,28 +18,30 @@ export class App {
 
     private initConfig(): void {
         dotenv.config();
+        console.log("-> Basic settings: Done");
     }
 
     private async initDataBase(): Promise<void> {
         await initDB();
+        console.log("-> Database: Running");
     }
 
     private initSwagger(): void {
         initSwagger(this.expressApp);
+        console.log("-> Swagger: Running");
     }
 
     private initRoutes(): void {
-        const geoRoutes = new GeoRoutes();
-        const transitRoutes = new TransitRoutes();
-
-        this.expressApp.use("/geo", geoRoutes.getRouter());
-        this.expressApp.use("/transit", transitRoutes.getRouter());
+        this.expressApp.use("/geo", getGeoRouter());
+        this.expressApp.use("/transit", getTransitRouter());
+        console.log("-> Routes: Established");
     }
 
     public listen(): void {
         const port = process.env.PORT || 3000;
         this.expressApp.listen(port, () => {
             console.log(`CiudadData API running on port ${port}`);
+            console.log("To end the API execution, press 'CTRL + C'");
         })
     }
 
