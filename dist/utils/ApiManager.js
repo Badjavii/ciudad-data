@@ -9,7 +9,11 @@ const AppError_1 = require("./AppError");
 class ApiManager {
     static async get(url, options) {
         try {
-            const response = await (0, node_fetch_1.default)(url, { method: "GET", ...options });
+            const safeOptions = {
+                ...options,
+                body: options?.body ?? undefined,
+            };
+            const response = await (0, node_fetch_1.default)(url, { method: "GET", ...safeOptions });
             if (!response.ok) {
                 throw new AppError_1.AppError(`API GET error: ${response.statusText}`, response.status);
             }

@@ -32,5 +32,4 @@ function initSwagger(app) {
     };
     const swaggerSpec = (0, swagger_jsdoc_1.default)(options);
     app.use("/api-docs", swagger_ui_express_1.default.serve, swagger_ui_express_1.default.setup(swaggerSpec));
-    console.log("Swagger docs available at /api-docs");
 }

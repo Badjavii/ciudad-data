@@ -8,10 +8,10 @@ const mongoose_1 = __importDefault(require("mongoose"));
 async function initDB() {
     try {
         await mongoose_1.default.connect(process.env.MONGO_URI);
-        console.log("Database connection: SUCCESSFUL");
+        console.log("-> Database connection: SUCCESSFUL");
     }
     catch (error) {
-        console.log("Database connection: FAILED", error);
+        console.log("-> Database connection: FAILED", error);
         process.exit(1);
     }
 }

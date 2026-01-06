@@ -18,26 +18,50 @@ let TransitService = class TransitService {
     async getRoutes(cityName) {
         // const routes = await this.repo.findRoutes(cityName);
         // if (routes?.length) return routes;
-        const data = await ApiManager_1.ApiManager.get(`https://api.transitdata.com/routes?city=${cityName}`);
-        if (!data.routes?.length) {
-            throw new AppError_1.AppError(`No routes found for city ${cityName}`, 404);
+        let data;
+        let routes;
+        if (cityName.toUpperCase() === "NYC") {
+            data = await ApiManager_1.ApiManager.get(`${process.env.MTA_API_URL}?key=${process.env.MTA_API_KEY}&VehicleMonitoringDetailLevel=calls`);
+            console.log(JSON.stringify(data, null, 2));
+            const activities = data.Siri?.ServiceDelivery?.VehicleMonitoringDelivery?.VehicleActivity || [];
+            routes = activities.map((act) => ({
+                lineRef: act.MonitoredVehicleJourney.LineRef,
+                direction: act.MonitoredVehicleJourney.DirectionRef,
+                stop: act.MonitoredVehicleJourney.MonitoredCall?.StopPointName,
+                expectedArrival: act.MonitoredVehicleJourney.MonitoredCall?.ExpectedArrivalTime,
+            }));
         }
-        const routes = data.routes.map((r) => ({
-            id: r.id,
-            name: r.name,
-            stops: r.stops,
-        }));
+        else if (cityName.toUpperCase() === "LONDON") {
+            data = await ApiManager_1.ApiManager.get(`${process.env.TFL_API_URL}/Line/Mode/bus?app_key=${process.env.TFL_API_KEY}`);
+            routes = data.map((line) => ({
+                id: line.id,
+                name: line.name,
+                mode: line.modeName
+            }));
+        }
+        else {
+            throw new AppError_1.AppError(`No routes available for city ${cityName}`, 404);
+        }
         // await this.repo.saveRoutes(cityName, routes);
         return routes;
     }
     async getETA(stopId) {
         // const eta = await this.repo.findETA(stopId);
         // if (eta) return eta;
-        const data = await ApiManager_1.ApiManager.get(`https://api.transitdata.com/eta?stop_id=${stopId}`);
-        if (!data.eta) {
+        const data = await ApiManager_1.ApiManager.get(`${process.env.MTA_API_URL}?key=${process.env.MTA_API_KEY}&MonitoringRef=${stopId}`);
+        if (!data) {
             throw new AppError_1.AppError(`No ETA found for stop ${stopId}`, 404);
         }
-        const eta = { stopId, arrivalTime: data.eta };
+        const calls = data.Siri?.ServiceDelivery?.StopMonitoringDelivery?.[0]?.MonitoredStopVisit || [];
+        const etaList = calls.map((visit) => ({
+            line: visit.MonitoredVehicleJourney.LineRef,
+            busId: visit.MonitoredVehicleJourney.VehicleRef,
+            stop: visit.MonitoredVehicleJourney.MonitoredCall.StopPointName,
+            expectedArrival: visit.MonitoredVehicleJourney.MonitoredCall.ExpectedArrivalTime,
+            distance: visit.MonitoredVehicleJourney.MonitoredCall.Extensions?.Distances?.PresentableDistance,
+            location: visit.MonitoredVehicleJourney.VehicleLocation,
+        }));
+        const eta = { stopId, eta: etaList };
         // await this.repo.saveETA(eta);
         return eta;
     }

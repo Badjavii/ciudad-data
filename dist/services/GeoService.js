@@ -31,16 +31,19 @@ let GeoService = class GeoService {
         // await this.repo.saveCity(cityData);
         return cityData;
     }
-    async getCountryPopulation(countryName) {
-        // const populationData = await this.repo.findPopulation(countryName);
+    async getCountryPopulation(countryCode) {
+        // const populationData = await this.repo.findPopulation(countryCode);
         // if (populationData) return populationData;
-        const data = await ApiManager_1.ApiManager.get(`${process.env.WORLD_BANK_URL}/country/${countryName}?format=json`);
+        const data = await ApiManager_1.ApiManager.get(`${process.env.WORLD_BANK_URL}/country/${countryCode}/indicator/SP.POP.TOTL?format=json`);
         if (!data[1]?.length) {
-            throw new AppError_1.AppError(`Country ${countryName} not found`, 404);
+            throw new AppError_1.AppError(`Country ${countryCode} not found`, 404);
         }
+        // Busca el último año con valor válido
+        const latest = data[1].find((d) => d.value !== null);
         const populationData = {
-            country: countryName,
-            population: data[1][0].population,
+            country: countryCode,
+            population: latest.value,
+            year: latest.date,
         };
         // await this.repo.savePopulation(populationData);
         return populationData;

@@ -4,7 +4,13 @@ import { AppError } from "./AppError";
 export class ApiManager {
   public static async get<T>(url: string, options?: RequestInit): Promise<T> {
     try {
-      const response = await fetch(url, { method: "GET", ...options });
+      
+      const safeOptions: RequestInit = {
+        ...options,
+        body: options?.body ?? undefined,
+      };
+
+      const response = await fetch(url, { method: "GET", ...safeOptions });
 
       if (!response.ok) {
         throw new AppError(`API GET error: ${response.statusText}`, response.status);

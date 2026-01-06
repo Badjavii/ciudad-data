@@ -1,3 +1,9 @@
+/**
+ * @file App.ts
+ * @description Main application class for CiudadData API.
+ * Configures Express, environment variables, database, Swagger, and routes.
+ */
+
 import express, { Application } from "express";
 import dotenv from "dotenv";
 import { initSwagger } from "./config/swagger";
@@ -5,9 +11,15 @@ import { initDB } from "./config/database";
 import { getGeoRouter } from "./routes/GeoRoutes";
 import { getTransitRouter } from "./routes/TransitRoutes";
 
+/**
+ * App class encapsulates the Express application setup.
+ */
 export class App {
     public readonly expressApp: Application;
 
+     /**
+     * Constructor initializes configuration, database, Swagger, and routes. 
+     */
     public constructor(){
         this.expressApp = express();
         this.initConfig();
@@ -17,7 +29,11 @@ export class App {
     }
 
     private initConfig(): void {
-        dotenv.config();
+        if (process.env.NODE_ENV === "test"){
+            dotenv.config({ path: ".env.test" });
+        } else {
+            dotenv.config();
+        }
         console.log("-> Basic settings: Done");
     }
 
@@ -40,8 +56,9 @@ export class App {
     public listen(): void {
         const port = process.env.PORT || 3000;
         this.expressApp.listen(port, () => {
-            console.log(`CiudadData API running on port ${port}`);
-            console.log("To end the API execution, press 'CTRL + C'");
+            console.log(`-> CiudadData API running on port ${port}`);
+            console.log("-> To end the API execution, press 'CTRL + C'");
+            console.log("-> The documentation is available at http://localhost:3000/api-docs");
         })
     }
 
