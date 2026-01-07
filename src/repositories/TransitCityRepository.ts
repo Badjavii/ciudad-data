@@ -5,6 +5,10 @@ import {
 import { TransitCity } from "../models/TransitCity";
 
 export class TransitCityRepository {
+  async findByName(name: string) {
+    return await TransitCityModel.findOne({ name: name.toLowerCase() });
+  }
+
   /**
    * Busca una ciudad y "puebla" sus rutas.
    * Esto convierte los IDs en los objetos completos de TransitUnit.

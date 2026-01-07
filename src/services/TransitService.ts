@@ -1,6 +1,7 @@
 import { Singleton } from "../middlewares/SingletonMW";
 import { TransitCityRepository } from "../repositories/TransitCityRepository";
 import { TransitUnitRepository } from "../repositories/TransitUnitRepository";
+import { CityRepository } from "../repositories/CityRepository";
 import { ApiManager } from "../utils/ApiManager";
 import { AppError } from "../utils/AppError";
 import { TransitCity } from "../models/TransitCity";
@@ -61,12 +62,36 @@ export class TransitService {
   }
 
   /**
-   * Reportar un incidente
+   * Reportar un incidente de transporte (retrasos, fallas, etc).
+   * Se aprovecha que TransitCity tiene una estructura similar a City.
    */
   public async reportIncident(
     cityName: string,
-    incident: string
+    message: string
   ): Promise<void> {
-    console.log(`Reporte para ${cityName}: ${incident}`);
+    // Buscamos la ciudad de transporte en el repository
+    let transitCityDoc = await this.cityRepo.findByName(cityName);
+
+    if (!transitCityDoc) {
+      // Si la ciudad no existe en nuestra DB, la traemos de la API primero
+      const cityEntity = await ApiManager.getCityRoutes(cityName);
+      if (!cityEntity) {
+        throw new AppError(
+          `Cannot report incident: City ${cityName} not found`,
+          404
+        );
+      }
+      // La guardamos inicialmente y re-obtenemos el documento mongoose
+      await this.cityRepo.save(cityEntity);
+      transitCityDoc = await this.cityRepo.findByName(cityName);
+    }
+
+    const cityRepoGeneral = new CityRepository();
+    const city = await cityRepoGeneral.findByName(cityName);
+
+    if (city) {
+      city.addReport(`[TRANSIT INCIDENT]: ${message}`);
+      await cityRepoGeneral.save(city);
+    }
   }
 }
