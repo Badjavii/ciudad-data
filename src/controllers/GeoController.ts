@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { GeoService } from "../services/GeoService";
 import { Singleton } from "../middlewares/SingletonMW";
+import { AppError } from "../utils/AppError";
 
 @Singleton
 export class GeoController {
@@ -12,84 +13,101 @@ export class GeoController {
 
   /**
    * @swagger
-   * /geo/{city}:
+   * /geo/city/{city}:
    *   get:
-   *     summary: Get city data
-   *     description: Returns information about a specific city.
+   *     summary: Obtener datos de una ciudad
+   *     description: Devuelve información detallada de una ciudad.
    *     parameters:
    *       - in: path
    *         name: city
    *         required: true
    *         schema:
    *           type: string
-   *         description: Name of the city
+   *         description: Nombre de la ciudad
    *     responses:
    *       200:
-   *         description: City data retrieved successfully
+   *         description: Datos de la ciudad obtenidos correctamente
    *         content:
    *           application/json:
    *             schema:
-   *               type: object
+   *               $ref: '#/components/schemas/City'
    */
   public async getCity(req: Request, res: Response): Promise<void> {
-    const cityName = req.params.city;
-    const cityData = await this.service.getCityData(cityName);
-    res.json(cityData);
+    try {
+      const cityName = req.params.city;
+      const city = await this.service.getCityData(cityName);
+      res.json(city);
+    } catch (err: any) {
+      const status = err instanceof AppError ? err.statusCode : 500;
+      res.status(status).json({ error: err.message });
+    }
   }
 
   /**
    * @swagger
-   * /geo/population/{country}:
+   * /geo/country/{countryCode}:
    *   get:
-   *     summary: Get country population
-   *     description: Returns population data for a given country.
+   *     summary: Obtener población de un país
+   *     description: Devuelve datos de población para un país específico.
    *     parameters:
    *       - in: path
-   *         name: country
+   *         name: countryCode
    *         required: true
    *         schema:
    *           type: string
-   *         description: Name of the country
+   *         description: Código del país (ej: VE)
    *     responses:
    *       200:
-   *         description: Population data retrieved successfully
+   *         description: Datos de población obtenidos correctamente
    *         content:
    *           application/json:
    *             schema:
-   *               type: object
+   *               $ref: '#/components/schemas/Country'
    */
   public async getPopulation(req: Request, res: Response): Promise<void> {
-    const countryName = req.params.country;
-    const populationData = await this.service.getCountryPopulation(countryName);
-    res.json(populationData);
+    try {
+      const countryCode = req.params.country;
+      const country = await this.service.getCountryPopulation(countryCode);
+      res.json(country);
+    } catch (err: any) {
+      const status = err instanceof AppError ? err.statusCode : 500;
+      res.status(status).json({ error: err.message });
+    }
   }
 
   /**
    * @swagger
    * /geo/report:
    *   post:
-   *     summary: Create a geo report
-   *     description: Saves a new geo report into the database.
+   *     summary: Crear un reporte para una ciudad
+   *     description: Agrega un nuevo reporte a una ciudad y lo guarda en la base de datos.
    *     requestBody:
    *       required: true
    *       content:
    *         application/json:
    *           schema:
    *             type: object
+   *             properties:
+   *               cityName:
+   *                 type: string
+   *               message:
+   *                 type: string
    *     responses:
    *       201:
-   *         description: Report saved successfully
+   *         description: Ciudad actualizada con el nuevo reporte
    *         content:
    *           application/json:
    *             schema:
-   *               type: object
-   *               properties:
-   *                 message:
-   *                   type: string
-   *                   example: Report saved successfully
+   *               $ref: '#/components/schemas/City'
    */
   public async createReport(req: Request, res: Response): Promise<void> {
-    await this.service.saveReport(req.body);
-    res.status(201).json({ message: "Report saved successfully" });
+    try {
+      const { cityName, message } = req.body;
+      const updatedCity = await this.service.saveReport(cityName, message);
+      res.status(201).json(updatedCity);
+    } catch (err: any) {
+      const status = err instanceof AppError ? err.statusCode : 500;
+      res.status(status).json({ error: err.message });
+    }
   }
 }
