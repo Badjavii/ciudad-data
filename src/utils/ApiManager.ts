@@ -210,16 +210,26 @@ export class ApiManager {
     const data = await ApiManager.get<any>(
       `${process.env.MTA_API_URL}?key=${process.env.MTA_API_KEY}&MonitoringRef=${stopId}`
     );
-
-    const calls = data.Siri?.ServiceDelivery?.StopMonitoringDelivery?.[0]?.MonitoredStopVisit || [];
-    if (!calls.length) return null;
+    
+    const delivery = data.Siri?.ServiceDelivery?.StopMonitoringDelivery?.[0];
+    const calls = delivery?.MonitoredStopVisit || [];
+    
+    if (calls.length === 0) {
+        return new TransitUnit(
+            "N/A", new Date().toISOString().split("T")[0],
+            "No buses approaching at this moment",
+            stopId, "Unknown Stop", "N/A", 0, 0, "0m"
+        );
+    }
 
     const visit = calls[0];
+
+    const etaValue = visit.MonitoredVehicleJourney.MonitoredCall?.ExpectedArrivalTime ? visit.MonitoredVehicleJourney.MonitoredCall?.ExpectedArrivalTime : "Couldn't get ETA at this moment.";
 
     return new TransitUnit(
       visit.MonitoredVehicleJourney.LineRef,
       visit.MonitoredVehicleJourney.FramedVehicleJourneyRef?.DataFrameRef,
-      visit.MonitoredVehicleJourney.MonitoredCall?.ExpectedArrivalTime,
+      etaValue,
       visit.MonitoredVehicleJourney.MonitoredCall?.StopPointRef,
       visit.MonitoredVehicleJourney.MonitoredCall?.StopPointName,
       visit.MonitoredVehicleJourney.VehicleRef,
