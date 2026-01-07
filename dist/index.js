@@ -11,5 +11,6 @@ const app = new App_1.App();
  * Start listening on the configured port.
  * Logs startup information and Swagger docs URL.
  */
+app.initDataBase();
 app.listen();
 console.log("\n\n");

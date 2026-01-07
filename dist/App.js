@@ -1,14 +1,20 @@
 "use strict";
-/**
- * @file App.ts
- * @description Main application class for CiudadData API.
- * Configures Express, environment variables, database, Swagger, and routes.
- */
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.App = void 0;
+/**
+ * @file App.ts
+ * @description Main application class for CiudadData API.
+ * Configures Express, environment variables, database, Swagger, and routes.
+ */
+const dnscache = require('dnscache');
+dnscache({
+    "enable": true,
+    "ttl": 300,
+    "cachesize": 1000
+});
 const express_1 = __importDefault(require("express"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const swagger_1 = require("./config/swagger");
@@ -20,8 +26,8 @@ const TransitRoutes_1 = require("./routes/TransitRoutes");
  */
 class App {
     /**
-    * Constructor initializes configuration, database, Swagger, and routes.
-    */
+     * Constructor initializes configuration, database, Swagger, and routes.
+     */
     constructor() {
         this.expressApp = (0, express_1.default)();
         this.initConfig();
@@ -47,6 +53,8 @@ class App {
         console.log("-> Swagger: Running");
     }
     initRoutes() {
+        this.expressApp.use(express_1.default.json());
+        this.expressApp.use(express_1.default.urlencoded({ extended: true }));
         this.expressApp.use("/geo", (0, GeoRoutes_1.getGeoRouter)());
         this.expressApp.use("/transit", (0, TransitRoutes_1.getTransitRouter)());
         console.log("-> Routes: Established");

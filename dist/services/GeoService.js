@@ -8,48 +8,59 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GeoService = void 0;
 const SingletonMW_1 = require("../middlewares/SingletonMW");
-const GeoRepository_1 = require("../repositories/GeoRepository");
+const CityRepository_1 = require("../repositories/CityRepository");
+const CountryRepository_1 = require("../repositories/CountryRepository");
 const ApiManager_1 = require("../utils/ApiManager");
 const AppError_1 = require("../utils/AppError");
 let GeoService = class GeoService {
     constructor() {
-        this.repo = new GeoRepository_1.GeoRepository();
+        this.cityRepo = new CityRepository_1.CityRepository();
+        this.countryRepo = new CountryRepository_1.CountryRepository();
     }
+    /**
+     * Obtiene datos de una ciudad.
+     * Primero busca en Atlas (Cache), si no existe, consulta GeoNames.
+     */
     async getCityData(cityName) {
-        // const cityData = await this.repo.findCity(cityName);
-        // if (cityData) return cityData;
-        const data = await ApiManager_1.ApiManager.get(`${process.env.GEONAMES_URL}/searchJSON?name=${cityName}&maxRows=1&username=${process.env.GEONAMES_USER}`);
-        if (!data.geonames?.length) {
-            throw new AppError_1.AppError(`City ${cityName} not found`, 404);
+        // 1. Intentar buscar en la base de datos local
+        let city = await this.cityRepo.findByName(cityName);
+        if (city)
+            return city;
+        // 2. Si no está, consultar la API externa
+        city = await ApiManager_1.ApiManager.getCityData(cityName);
+        if (!city) {
+            throw new AppError_1.AppError(`City ${cityName} not found in external API`, 404);
         }
-        const cityData = {
-            name: cityName,
-            lat: data.geonames[0].lat,
-            lng: data.geonames[0].lng,
-            country: data.geonames[0].countryName,
-        };
-        // await this.repo.saveCity(cityData);
-        return cityData;
+        // 3. Guardar en Atlas para futuras consultas
+        await this.cityRepo.save(city);
+        return city;
     }
+    /**
+     * Obtiene datos de un país.
+     * Aplica la misma lógica de "Cache-aside" (DB primero, luego API).
+     */
     async getCountryPopulation(countryCode) {
-        // const populationData = await this.repo.findPopulation(countryCode);
-        // if (populationData) return populationData;
-        const data = await ApiManager_1.ApiManager.get(`${process.env.WORLD_BANK_URL}/country/${countryCode}/indicator/SP.POP.TOTL?format=json`);
-        if (!data[1]?.length) {
+        let country = await this.countryRepo.findByCode(countryCode);
+        if (country)
+            return country;
+        country = await ApiManager_1.ApiManager.getCountryData(countryCode);
+        if (!country) {
             throw new AppError_1.AppError(`Country ${countryCode} not found`, 404);
         }
-        // Busca el último año con valor válido
-        const latest = data[1].find((d) => d.value !== null);
-        const populationData = {
-            country: countryCode,
-            population: latest.value,
-            year: latest.date,
-        };
-        // await this.repo.savePopulation(populationData);
-        return populationData;
+        await this.countryRepo.save(country);
+        return country;
     }
-    async saveReport(report) {
-        // await this.repo.saveReport(report);
+    /**
+     * Guarda un reporte ciudadano.
+     */
+    async saveReport(cityName, message) {
+        // Obtenemos la ciudad (de la DB o la API)
+        let city = await this.getCityData(cityName);
+        // Usamos el método de la clase City para la lógica de negocio
+        city.addReport(message);
+        // Persistimos el cambio
+        await this.cityRepo.save(city);
+        return city;
     }
 };
 exports.GeoService = GeoService;
