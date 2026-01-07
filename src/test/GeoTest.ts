@@ -1,5 +1,6 @@
 import request from "supertest";
 import { App } from "../App";
+import { pause } from "./setup";
 
 const app = new App().expressApp;
 
@@ -13,6 +14,7 @@ describe("GeoController API", () => {
     expect(res.body).toHaveProperty("lng");
     expect(res.body).toHaveProperty("countryCode");
   });
+
 
   it("GET /geo/population/:country should return population data", async () => {
     const res = await request(app).get("/geo/population/VE");
@@ -30,4 +32,5 @@ describe("GeoController API", () => {
     expect(res.status).toBe(201);
     expect(res.body).toHaveProperty("message", "Report saved successfully");
   });
+
 });

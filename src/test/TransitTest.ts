@@ -1,5 +1,6 @@
 import request from "supertest";
 import { App } from "../App";
+import { pause } from "./setup";
 
 const app = new App().expressApp;
 
@@ -32,4 +33,5 @@ describe("TransitController API", () => {
     expect(res.status).toBe(201);
     expect(res.body).toHaveProperty("message", "Incident reported successfully");
   });
+
 });
