@@ -1,48 +1,73 @@
+/**
+ * @file App.ts
+ * @description Main application class for CiudadData API.
+ * Configures Express, environment variables, database, Swagger, and routes.
+ */
+const dnscache = require('dnscache');
+dnscache({
+  "enable": true,
+  "ttl": 300,
+  "cachesize": 1000
+});
 import express, { Application } from "express";
 import dotenv from "dotenv";
 import { initSwagger } from "./config/swagger";
 import { initDB } from "./config/database";
-import { Singleton } from "./middlewares/annotations";
-import { GeoRoutes } from "./routes/GeoRoutes";
-import { TransitRoutes } from "./routes/TransitRoutes";
+import { getGeoRouter } from "./routes/GeoRoutes";
+import { getTransitRouter } from "./routes/TransitRoutes";
 
-@Singleton()
+/**
+ * App class encapsulates the Express application setup.
+ */
 export class App {
-    public readonly expressApp: Application;
+  public readonly expressApp: Application;
 
-    private constructor(){
-        this.expressApp = express();
-        this.initConfig();
-        this.initDataBase();
-        this.initSwagger();
-        this.initRoutes();
-    }
+  /**
+   * Constructor initializes configuration, database, Swagger, and routes.
+   */
+  public constructor() {
+    this.expressApp = express();
+    this.initConfig();
+    this.initDataBase();
+    this.initSwagger();
+    this.initRoutes();
+  }
 
-    private initConfig(): void {
-        dotenv.config();
+  private initConfig(): void {
+    if (process.env.NODE_ENV === "test") {
+      dotenv.config({ path: ".env.test" });
+    } else {
+      dotenv.config();
     }
+    console.log("-> Basic settings: Done");
+  }
 
-    private async initDataBase(): Promise<void> {
-        await initDB();
-    }
+  public async initDataBase(): Promise<void> {
+    await initDB();
+    console.log("-> Database: Running");
+  }
 
-    private initSwagger(): void {
-        initSwagger(this.expressApp);
-    }
+  private initSwagger(): void {
+    initSwagger(this.expressApp);
+    console.log("-> Swagger: Running");
+  }
 
     private initRoutes(): void {
-        const geoRoutes = new GeoRoutes();
-        const transitRoutes = new TransitRoutes();
-
-        this.expressApp.use("/geo", geoRoutes.getRouter());
-        this.expressApp.use("/transit", transitRoutes.getRouter());
+        this.expressApp.use(express.json());
+        this.expressApp.use(express.urlencoded({ extended: true }));
+        this.expressApp.use("/geo", getGeoRouter());
+        this.expressApp.use("/transit", getTransitRouter());
+        console.log("-> Routes: Established");
     }
 
-    public listen(): void {
-        const port = process.env.PORT || 3000;
-        this.expressApp.listen(port, () => {
-            console.log(`CiudadData API running on port ${port}`);
-        })
-    }
-
+  public listen(): void {
+    const port = process.env.PORT || 3000;
+    this.expressApp.listen(port, () => {
+      console.log(`-> CiudadData API running on port ${port}`);
+      console.log("-> To end the API execution, press 'CTRL + C'");
+      console.log(
+        "-> The documentation is available at http://localhost:3000/api-docs"
+      );
+    });
+  }
 }

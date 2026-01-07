@@ -1,9 +1,17 @@
-import { App } from "./App";
-import { getWeaver } from "aspectjs";
-import { SingletonMW } from "./middlewares/SingletonMW";
+/**
+ * @file index.ts
+ * @description Entry point of the CiudadData API.
+ * Initializes the App class and starts the server.
+ */
 
-getWeaver().enable(new SingletonMW());
+import { App } from "./App";
 
 const app = new App();
 
+/**
+ * Start listening on the configured port.
+ * Logs startup information and Swagger docs URL.
+ */
+app.initDataBase();
 app.listen();
+console.log("\n\n");

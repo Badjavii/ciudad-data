@@ -1,23 +1,14 @@
 import { Router } from "express";
 import { GeoController } from "../controllers/GeoController";
+import { withErrorCatcher } from "../middlewares/ErrorResCatcherMW";
 
-export class GeoRoutes {
-  private readonly router: Router;
-  private readonly controller: GeoController;
+export function getGeoRouter(): Router {
+  const router = Router();
+  const controller = new GeoController();
+  
+  router.get("/city/:city", withErrorCatcher(controller.getCity.bind(controller)));
+  router.get("/population/:country", withErrorCatcher(controller.getPopulation.bind(controller)));
+  router.post("/report", withErrorCatcher(controller.createReport.bind(controller)));
 
-  constructor() {
-    this.router = Router();
-    this.controller = new GeoController();
-    this.initRoutes();
-  }
-
-  private initRoutes(): void {
-    this.router.get("/city/:city", this.controller.getCity.bind(this.controller));
-    this.router.get("/population/:country", this.controller.getPopulation.bind(this.controller));
-    this.router.post("/report", this.controller.createReport.bind(this.controller));
-  }
-
-  public getRouter(): Router {
-    return this.router;
-  }
+  return router;
 }
