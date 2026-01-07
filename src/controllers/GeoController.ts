@@ -38,6 +38,7 @@ export class GeoController {
       const city = await this.service.getCityData(cityName);
       res.json(city);
     } catch (err: any) {
+      console.log("Error debug: ", err);
       const status = err instanceof AppError ? err.statusCode : 500;
       res.status(status).json({ error: err.message });
     }
@@ -45,17 +46,17 @@ export class GeoController {
 
   /**
    * @swagger
-   * /geo/country/{countryCode}:
+   * /geo/country/{country}:
    *   get:
    *     summary: Obtener población de un país
    *     description: Devuelve datos de población para un país específico.
    *     parameters:
    *       - in: path
-   *         name: countryCode
+   *         name: country
    *         required: true
    *         schema:
    *           type: string
-   *         description: Código del país (ej: VE)
+   *         description: "Código del país, por ejemplo VE"
    *     responses:
    *       200:
    *         description: Datos de población obtenidos correctamente
@@ -70,6 +71,7 @@ export class GeoController {
       const country = await this.service.getCountryPopulation(countryCode);
       res.json(country);
     } catch (err: any) {
+      console.log("Error debug: ", err);
       const status = err instanceof AppError ? err.statusCode : 500;
       res.status(status).json({ error: err.message });
     }
@@ -104,8 +106,9 @@ export class GeoController {
     try {
       const { cityName, message } = req.body;
       const updatedCity = await this.service.saveReport(cityName, message);
-      res.status(201).json(updatedCity);
+      res.status(201).json({ message: "Report saved successfully" });
     } catch (err: any) {
+      console.log("Error debug: ", err);
       const status = err instanceof AppError ? err.statusCode : 500;
       res.status(status).json({ error: err.message });
     }

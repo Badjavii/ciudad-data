@@ -10,8 +10,43 @@ export class ApiManager {
    * @swagger
    * components:
    *   schemas:
+   *     ApiResponse:
+   *       type: object
+   *       description: Respuesta genérica de cualquier API externa
+   */
+    public static async get<T>(url: string, options?: RequestInit): Promise<T> {
+        const maxRetries = 3;
+        let lastError: any;
+
+        for (let i = 0; i < maxRetries; i++) {
+            try {
+                const safeOptions: RequestInit = {
+                    ...options,
+                    body: options?.body ?? undefined,};
+                    const response = await fetch(url, { method: "GET", ...safeOptions });
+                    if (!response.ok) {
+                        throw new AppError(`API GET error: ${response.statusText}`, response.status);
+                    }
+                    return await response.json() as T;
+            } catch (err: any) {
+                lastError = err;
+                if (i < maxRetries - 1) {
+                    console.log(`Retrying request to ${url} (${i + 1}/${maxRetries})...`);
+                    await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+                    continue;
+                }
+            }
+        }
+        throw new AppError(`Failed GET request after ${maxRetries} attempts to ${url}: ${lastError.message}`, 500);
+    }
+
+  /**
+   * @swagger
+   * components:
+   *   schemas:
    *     City:
    *       type: object
+   *       description: Datos básicos de una ciudad
    *       properties:
    *         name:
    *           type: string
@@ -45,6 +80,7 @@ export class ApiManager {
    *   schemas:
    *     Country:
    *       type: object
+   *       description: Datos de población de un país
    *       properties:
    *         countryName:
    *           type: string
@@ -80,6 +116,7 @@ export class ApiManager {
    *   schemas:
    *     TransitCity:
    *       type: object
+   *       description: Ciudad con sus rutas de transporte público
    *       properties:
    *         name:
    *           type: string
@@ -139,12 +176,13 @@ export class ApiManager {
     return null;
   }
 
-    /**
+  /**
    * @swagger
    * components:
    *   schemas:
    *     TransitUnit:
    *       type: object
+   *       description: Unidad de transporte público con ETA
    *       properties:
    *         line:
    *           type: string
@@ -191,4 +229,3 @@ export class ApiManager {
     );
   }
 }
-

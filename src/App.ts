@@ -3,7 +3,12 @@
  * @description Main application class for CiudadData API.
  * Configures Express, environment variables, database, Swagger, and routes.
  */
-
+const dnscache = require('dnscache');
+dnscache({
+  "enable": true,
+  "ttl": 300,
+  "cachesize": 1000
+});
 import express, { Application } from "express";
 import dotenv from "dotenv";
 import { initSwagger } from "./config/swagger";
@@ -47,11 +52,13 @@ export class App {
     console.log("-> Swagger: Running");
   }
 
-  private initRoutes(): void {
-    this.expressApp.use("/geo", getGeoRouter());
-    this.expressApp.use("/transit", getTransitRouter());
-    console.log("-> Routes: Established");
-  }
+    private initRoutes(): void {
+        this.expressApp.use(express.json());
+        this.expressApp.use(express.urlencoded({ extended: true }));
+        this.expressApp.use("/geo", getGeoRouter());
+        this.expressApp.use("/transit", getTransitRouter());
+        console.log("-> Routes: Established");
+    }
 
   public listen(): void {
     const port = process.env.PORT || 3000;
