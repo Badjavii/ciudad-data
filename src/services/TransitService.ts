@@ -1,5 +1,6 @@
 import { Singleton } from "../middlewares/SingletonMW";
-import { TransitRepository } from "../repositories/TransitRepository";
+import { TransitCityRepository } from "../repositories/TransitCityRepository";
+import { TransitUnitRepository } from "../repositories/TransitUnitRepository";
 import { ApiManager } from "../utils/ApiManager";
 import { AppError } from "../utils/AppError";
 import { TransitCity } from "../models/TransitCity";
@@ -7,100 +8,65 @@ import { TransitUnit } from "../models/TransitUnit";
 
 @Singleton
 export class TransitService {
-  private readonly repo: TransitRepository;
+  private readonly cityRepo: TransitCityRepository;
+  private readonly unitRepo: TransitUnitRepository;
 
   constructor() {
-    this.repo = new TransitRepository();
+    this.cityRepo = new TransitCityRepository();
+    this.unitRepo = new TransitUnitRepository();
   }
 
   /**
-   * @swagger
-   * /transit/routes/{city}:
-   *   get:
-   *     summary: Obtener rutas de transporte público
-   *     description: Devuelve todas las rutas de transporte disponibles en una ciudad (NYC o London).
-   *     parameters:
-   *       - in: path
-   *         name: city
-   *         required: true
-   *         schema:
-   *           type: string
-   *     responses:
-   *       200:
-   *         description: Lista de rutas de la ciudad
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/TransitCity'
+   * Obtiene rutas de transporte.
+   * Busca en Atlas (con populate) o consulta API externa si no existe.
    */
-  public async getRoutes(cityName: string): Promise<TransitCity> {
-    let city;
-    // city = await this.repo.findRoutes(cityName);
-    //if (city) return city;
+  public async getRoutes(cityName: string): Promise<any> {
+    // 1. Intentar buscar en DB (incluyendo los datos de las unidades conectadas)
+    let cityDoc = await this.cityRepo.findByNameWithRoutes(cityName);
+    if (cityDoc) return cityDoc;
 
-    city = await ApiManager.getCityRoutes(cityName);
-    if (!city) {
+    // 2. Si no está, consultar API externa
+    const cityEntity = await ApiManager.getCityRoutes(cityName);
+    if (!cityEntity) {
       throw new AppError(`No routes available for city ${cityName}`, 404);
     }
 
-    // await this.repo.saveRoutes(city);
-    return city;
+    // 3. Persistencia Compleja:
+    // Primero guardamos cada TransitUnit y obtenemos sus IDs de MongoDB
+    const savedUnitIds: string[] = [];
+    for (const unit of cityEntity.routes) {
+      const savedUnit = await this.unitRepo.save(unit);
+      savedUnitIds.push(savedUnit._id.toString());
+    }
+
+    // 4. Guardamos la TransitCity con los IDs de las rutas
+    return await this.cityRepo.save(cityEntity, savedUnitIds);
   }
 
   /**
-   * @swagger
-   * /transit/eta:
-   *   get:
-   *     summary: Obtener ETA de una parada
-   *     description: Devuelve la próxima unidad de transporte público que llegará a una parada específica.
-   *     parameters:
-   *       - in: query
-   *         name: stop_id
-   *         required: true
-   *         schema:
-   *           type: string
-   *     responses:
-   *       200:
-   *         description: Próxima unidad con ETA
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/TransitUnit'
+   * Obtiene el ETA de una parada.
+   * Aquí el dato de tiempo real suele venir siempre de la API,
+   * pero lo guardamos en DB para historial/caché rápido.
    */
   public async getETA(stopId: string): Promise<TransitUnit> {
-    let eta;
-    // eta = await this.repo.findETA(stopId);
-    //if (eta) return eta;
-
+    // Consultamos tiempo real
     const unit = await ApiManager.getETA(stopId);
     if (!unit) {
       throw new AppError(`No ETA found for stop ${stopId}`, 404);
     }
 
-    // await this.repo.saveETA(unit);
+    // Guardamos/Actualizamos el estado de esta unidad en Atlas
+    await this.unitRepo.save(unit);
     return unit;
   }
 
   /**
-   * @swagger
-   * /transit/incident:
-   *   post:
-   *     summary: Reportar un incidente de transporte
-   *     description: Permite a los ciudadanos reportar incidentes de transporte (retrasos, fallas, etc).
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               message:
-   *                 type: string
-   *     responses:
-   *       201:
-   *         description: Incidente reportado exitosamente
+   * Reportar un incidente
    */
-  public async reportIncident(incident: string): Promise<void> {
-    // await this.repo.saveIncident(incident);
+  public async reportIncident(
+    cityName: string,
+    incident: string
+  ): Promise<void> {
+    console.log(`Reporte para ${cityName}: ${incident}`);
   }
 }

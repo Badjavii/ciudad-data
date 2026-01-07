@@ -1,5 +1,6 @@
 import { Singleton } from "../middlewares/SingletonMW";
-import { GeoRepository } from "../repositories/GeoRepository";
+import { CityRepository } from "../repositories/CityRepository";
+import { CountryRepository } from "../repositories/CountryRepository";
 import { ApiManager } from "../utils/ApiManager";
 import { AppError } from "../utils/AppError";
 import { City } from "../models/City";
@@ -7,95 +8,63 @@ import { Country } from "../models/Country";
 
 @Singleton
 export class GeoService {
-  private readonly repo: GeoRepository;
+  private readonly cityRepo: CityRepository;
+  private readonly countryRepo: CountryRepository;
 
   constructor() {
-    this.repo = new GeoRepository();
+    this.cityRepo = new CityRepository();
+    this.countryRepo = new CountryRepository();
   }
 
-  /**`
-   * @swagger
-   * /geo/city/{city}:
-   *   get:
-   *     summary: Obtener datos de una ciudad
-   *     parameters:
-   *       - in: path
-   *         name: city
-   *         required: true
-   *         schema:
-   *           type: string
-   *     responses:
-   *       200:
-   *         description: Datos de la ciudad
+  /**
+   * Obtiene datos de una ciudad.
+   * Primero busca en Atlas (Cache), si no existe, consulta GeoNames.
    */
   public async getCityData(cityName: string): Promise<City> {
-    let city;
-    //city = await this.repo.findCity(cityName);
-    //if (city) return city;
+    // 1. Intentar buscar en la base de datos local
+    let city = await this.cityRepo.findByName(cityName);
+    if (city) return city;
 
+    // 2. Si no está, consultar la API externa
     city = await ApiManager.getCityData(cityName);
     if (!city) {
-      throw new AppError(`City ${cityName} not found`, 404);
+      throw new AppError(`City ${cityName} not found in external API`, 404);
     }
 
-    //await this.repo.saveCity(city);
+    // 3. Guardar en Atlas para futuras consultas
+    await this.cityRepo.save(city);
     return city;
   }
 
   /**
-   * @swagger
-   * /geo/country/{countryCode}:
-   *   get:
-   *     summary: Obtener población de un país
-   *     parameters:
-   *       - in: path
-   *         name: countryCode
-   *         required: true
-   *         schema:
-   *           type: string
-   *     responses:
-   *       200:
-   *         description: Datos de población del país
+   * Obtiene datos de un país.
+   * Aplica la misma lógica de "Cache-aside" (DB primero, luego API).
    */
   public async getCountryPopulation(countryCode: string): Promise<Country> {
-    let country;
-    // county = await this.repo.findCountry(countryCode);
-    //if (country) return country;
+    let country = await this.countryRepo.findByCode(countryCode);
+    if (country) return country;
 
     country = await ApiManager.getCountryData(countryCode);
     if (!country) {
       throw new AppError(`Country ${countryCode} not found`, 404);
     }
 
-    // await this.repo.saveCountry(country);
+    await this.countryRepo.save(country);
     return country;
   }
 
   /**
-   * @swagger
-   * /geo/report:
-   *   post:
-   *     summary: Guardar un reporte en una ciudad
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               cityName:
-   *                 type: string
-   *               message:
-   *                 type: string
-   *     responses:
-   *       200:
-   *         description: Ciudad actualizada con el nuevo reporte
+   * Guarda un reporte ciudadano.
    */
   public async saveReport(cityName: string, message: string): Promise<City> {
+    // Obtenemos la ciudad (de la DB o la API)
     let city = await this.getCityData(cityName);
+
+    // Usamos el método de la clase City para la lógica de negocio
     city.addReport(message);
 
-    await this.repo.updateCity(city);
+    // Persistimos el cambio
+    await this.cityRepo.save(city);
     return city;
   }
 }
