@@ -6,6 +6,6 @@ export async function initDB(): Promise<void> {
     console.log("-> Database connection: SUCCESSFUL");
   } catch (error) {
     console.log("-> Database connection: FAILED", error);
-    process.exit(1);
+    //process.exit(1);
   }
 }

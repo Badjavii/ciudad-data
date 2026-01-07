@@ -21,7 +21,7 @@
     "@aspectjs/core": "^0.5.4",
     "dnscache": "^1.0.2",
     "dotenv": "^17.2.3",
-    "mongoose": "^9.0.1",
+    "mongoose": "^9.1.2",
     "node-fetch": "^2.7.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",

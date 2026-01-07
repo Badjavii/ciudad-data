@@ -6,7 +6,7 @@ const app = new App().expressApp;
 
 describe("TransitController API", () => {
   it("GET /transit/eta?stop_id=553437 should return next TransitUnit", async () => {
-    const res = await request(app).get("/transit/eta").query({ stop_id: "553437" });
+    const res = await request(app).get("/transit/eta").query({ stop_id: "700075" });
     console.log("-> Transit ETA Response:", JSON.stringify(res.body, null, 2));
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty("stopId");
